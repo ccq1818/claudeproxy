@@ -25,7 +25,7 @@ case "${1:-status}" in
   status)
     echo "ClashX 配置: $(cur_config)"
     OUT=$(curl -s -m 8 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
-    [ -n "$OUT" ] && echo "当前出口: $OUT" || echo "7890 代理未就绪"
+    [ -n "${OUT}" ] && echo "当前出口: ${OUT}" || echo "7890 代理未就绪"
     ;;
   off)
     PREV=$(cat "$LAST" 2>/dev/null || echo local-merged)
@@ -35,16 +35,16 @@ case "${1:-status}" in
   *)
     IP="$(norm "$1")"
     CUR="$(cur_config)"
-    [ "$CUR" != "ccq-vps" ] && echo "$CUR" > "$LAST"
+    [ "${CUR}" != "ccq-vps" ] && echo "${CUR}" > "$LAST"
     cat > "$CFG" <<EOF
-# ccq 出口配置（swvpn 自动生成，出口 $IP）
+# ccq 出口配置（swvpn 自动生成，出口 ${IP}）
 port: 7890
 socks-port: 7891
 external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 proxies:
-  - { name: "egress", type: socks5, server: $IP, port: 1080, username: $IP, password: $PASS }
+  - { name: "egress", type: socks5, server: ${IP}, port: 1080, username: ${IP}, password: ${PASS} }
 proxy-groups:
   - { name: "出口", type: select, proxies: ["egress", DIRECT] }
 rules:
@@ -53,7 +53,7 @@ EOF
     defaults write $DOMAIN selectConfigName "ccq-vps"
     restart_clash || { echo "ClashX 重启失败"; exit 1; }
     OUT=$(curl -s -m 10 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
-    if [ "$OUT" = "$IP" ]; then echo "OK ClashX 已切到出口 $IP（实测出口一致）"
-    else echo "警告：期望 $IP，实测出口 ${OUT:-无}——检查该 IP 的 1080 是否有代理"; fi
+    if [ "${OUT}" = "${IP}" ]; then echo "OK ClashX 已切到出口 ${IP}（实测出口一致）"
+    else echo "警告：期望 ${IP}，实测出口 ${OUT:-无}——检查该 IP 的 1080 是否有代理"; fi
     ;;
 esac
