@@ -87,6 +87,20 @@ mock 环境验证的是协议，不是全部真实行为。拿真实编码会话
 连续工具调用、长会话（观察后段延迟——会话回放成本）、`/compact`、粘贴图片、并行子代理。
 出问题看 `journalctl -u claudeproxy -f`。
 
+## 本地/云端一键切换（可选）
+
+两边跑同一个 claudeproxy、**同一个 key**（config.json 拷贝过去，或两边同设 `CLAUDE_LOCAL_API_KEY`）、同一个本地端口。
+客户端的 `BASE_URL`/`ANTHROPIC_API_KEY` 永远不变，切换的只是 127.0.0.1:8466 背后是谁：
+
+```bash
+./deploy/switch.sh vps     # 断本地 facade，接 SSH 隧道 -> VPS 直连出口
+./deploy/switch.sh local   # 断隧道，起本地 facade -> 本地 clash 出口
+./deploy/switch.sh status  # 查看当前状态
+```
+
+说明：VPS 上**不需要**再装 clash——如果你本地 clash 的出口就是这台 VPS（如 vultr-经日本），
+那账号的 IP 历史本就一直是这个 IP，VPS 直连反而是最一致的形态；再套一层代理才会打破一致性。
+
 ## 运维备忘
 
 - OAuth 过期兜底：`claude -p hi` 报未登录时，SSH 上去重跑 `claude /login`
