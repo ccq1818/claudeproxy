@@ -1,0 +1,19 @@
+[Unit]
+Description=claudeproxy — resident-session Claude facade
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/claudeproxy
+EnvironmentFile=/etc/claudeproxy.env
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=3
+# hardening: keep the loopback-binding service low-privilege
+User=claudeproxy
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+# claudeproxy TLS reverse proxy (auto certs)
+# DNS A record: api.yourdomain.com -> this VPS
+api.yourdomain.com {
+	reverse_proxy 127.0.0.1:8466
+}
