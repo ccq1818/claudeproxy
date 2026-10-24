@@ -107,6 +107,15 @@ mock 环境验证的是协议，不是全部真实行为。拿真实编码会话
 说明：VPS 上**不需要**再装 clash——如果你本地 clash 的出口就是这台 VPS（如 vultr-经日本），
 那账号的 IP 历史本就一直是这个 IP，VPS 直连反而是最一致的形态；再套一层代理才会打破一致性。
 
+## Docker 三实例（同账号 × 三出口 IP）
+
+已实证的部署要点（详见 deploy/docker/）：
+- 容器内必须 `HOST=0.0.0.0`（端口仅发布在宿主机回环，公网不可达）
+- SNAT 规则要用 `iptables -I POSTROUTING 1`（排在 docker MASQUERADE 之前才生效）
+- 凭证可从本地 Keychain 直接灌入共享卷（免浏览器登录）：
+  `security find-generic-password -a "$USER" -s "Claude Code-credentials" -w | docker exec -i cpx1 sh -c 'cat > /root/.claude/.credentials.json'`
+- 三容器一个 key（compose env `CLAUDE_LOCAL_API_KEY`），宿主机端口 8466/8467/8468 = 三个出口 IP
+
 ## 运维备忘
 
 - OAuth 过期兜底：`claude -p hi` 报未登录时，SSH 上去重跑 `claude /login`（遥测已被 harden-vps.sh 关闭，手工运行也静默）
