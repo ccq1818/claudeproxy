@@ -57,37 +57,15 @@ services:
       - "127.0.0.1:8468:8466"
     volumes:
       - creds:/root/.claude
-  # ---- egress proxy nodes (browser/login via the same three IPs) ----
-  px1:
-    image: ginuerzh/gost
-    command: ["-L", "cpx:d221ea9e1fbae90a@:1080"]
+
+  dynproxy:
+    image: node:22-slim
     restart: unless-stopped
-    mem_limit: 64m
-    networks:
-      cpxnet:
-        ipv4_address: 172.28.0.21
-    ports:
-      - "104.223.81.129:1080:1080"
-  px2:
-    image: ginuerzh/gost
-    command: ["-L", "cpx:d221ea9e1fbae90a@:1080"]
-    restart: unless-stopped
-    mem_limit: 64m
-    networks:
-      cpxnet:
-        ipv4_address: 172.28.0.22
-    ports:
-      - "104.223.81.130:1080:1080"
-  px3:
-    image: ginuerzh/gost
-    command: ["-L", "cpx:d221ea9e1fbae90a@:1080"]
-    restart: unless-stopped
-    mem_limit: 64m
-    networks:
-      cpxnet:
-        ipv4_address: 172.28.0.23
-    ports:
-      - "104.223.81.131:1080:1080"
+    mem_limit: 128m
+    network_mode: host
+    volumes:
+      - ./deploy/dynproxy.mjs:/dynproxy.mjs:ro
+    command: ["node", "/dynproxy.mjs"]
 volumes:
   creds: {}
 networks:
