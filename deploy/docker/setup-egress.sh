@@ -16,4 +16,4 @@ for i in 0 1 2 3 4 5; do
   iptables -t nat -I POSTROUTING 1 -s "$cid" -j SNAT --to-source "$ip"
   echo "container ($cid) -> egress $ip"
 done
-echo "done. 验证：docker exec cpx1 curl -s https://api.ipify.org  应返回 ${!0}... 用各容器分别试"
+echo "done. 验证：各容器 docker exec <c> curl -s https://api.ipify.org 应返回其绑定 IP"
