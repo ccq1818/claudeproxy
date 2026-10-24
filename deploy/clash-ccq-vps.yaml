@@ -1,14 +1,19 @@
-# ccq 三出口（每个节点 = 一台独立代理，socks5 over TLS @443，ClashX 直连）
+# ccq 三出口 — 复刻你自己的 "Vultr-经日本" relay 模式：日本前置 -> 我们的代理容器
+# 用法：ClashX 配置切到 ccq-vps，"出口" 组里点 链-129 / 链-130 / 链-131
 port: 7890
 socks-port: 7891
-external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 proxies:
-  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
-  - { name: "vps-130", type: socks5, server: 104.223.81.130, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
-  - { name: "vps-131", type: socks5, server: 104.223.81.131, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
+  - { name: "日本A09 | IEPL", type: ss, server: 7.q.3.m.d.7.u.e.d.jp09-ae5.entry.v51124-5.qpon, port: 11161, cipher: aes-256-gcm, password: "f32ec7e1-ffa1-36c9-a38c-80c73973e595", udp: true }
+  - { name: "raw-129", type: socks5, server: 104.223.81.129, port: 443, username: cpx, password: "d221ea9e1fbae90a", tls: true, skip-cert-verify: true }
+  - { name: "raw-130", type: socks5, server: 104.223.81.130, port: 443, username: cpx, password: "d221ea9e1fbae90a", tls: true, skip-cert-verify: true }
+  - { name: "raw-131", type: socks5, server: 104.223.81.131, port: 443, username: cpx, password: "d221ea9e1fbae90a", tls: true, skip-cert-verify: true }
 proxy-groups:
-  - { name: "出口", type: select, proxies: ["vps-129", "vps-130", "vps-131", DIRECT] }
+  - { name: "日本前置", type: select, proxies: ["日本A09 | IEPL"] }
+  - { name: "链-129", type: relay, proxies: ["日本前置", "raw-129"] }
+  - { name: "链-130", type: relay, proxies: ["日本前置", "raw-130"] }
+  - { name: "链-131", type: relay, proxies: ["日本前置", "raw-131"] }
+  - { name: "出口", type: select, proxies: ["链-129", "链-130", "链-131", DIRECT] }
 rules:
   - MATCH,出口
