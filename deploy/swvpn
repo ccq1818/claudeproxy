@@ -1,22 +1,28 @@
 #!/bin/bash
-# swvpn — 通过 ClashX 一键切出口。浏览器/系统代理完全交给 ClashX 管理。
-#   swvpn <IP或简写129/130/131>   切到该出口（自动生成节点+切配置+重启ClashX+验证）
-#   swvpn off                     切回原配置
-#   swvpn status                  当前出口
+# swvpn — ClashX 一键切出口（SSH 隧道版，抗封锁）
+#   swvpn <IP或简写129/130/131>   切出口：SSH隧道 + 生成ClashX配置 + 重启 + 验证
+#   swvpn off                     切回原 ClashX 配置
+#   swvpn status                  当前状态
 set -u
 DOMAIN="com.west2online.ClashX"
-CFG_DIR="$HOME/.config/clash"
-CFG="$CFG_DIR/ccq-vps.yaml"
+CFG="$HOME/.config/clash/ccq-vps.yaml"
 LAST="$HOME/.swvpn-last-config"
 PASS="d221ea9e1fbae90a"
+SRV="root@104.223.81.129"
 
 norm() { case "$1" in
   129) echo 104.223.81.129;; 130) echo 104.223.81.130;; 131) echo 104.223.81.131;;
   *) echo "$1";; esac; }
 cur_config() { defaults read $DOMAIN selectConfigName 2>/dev/null | tr -d '"'; }
+tunnel_pid() { pgrep -f "ssh.*-L 127.0.0.1:11080:127.0.0.1:1080" 2>/dev/null; }
+up_tunnel() {
+  tunnel_pid | xargs kill 2>/dev/null; sleep 0.5
+  ssh -f -N -L 127.0.0.1:11080:127.0.0.1:1080 "$SRV" 2>/dev/null
+  for i in 1 2 3 4 5; do sleep 1; nc -z 127.0.0.1 11080 2>/dev/null && return 0; done
+  return 1
+}
 restart_clash() {
-  pkill -x ClashX 2>/dev/null; sleep 1
-  open -a ClashX
+  pkill -x ClashX 2>/dev/null; sleep 1; open -a ClashX
   for i in 1 2 3 4 5 6 7 8; do sleep 1; nc -z 127.0.0.1 7890 2>/dev/null && return 0; done
   return 1
 }
@@ -30,30 +36,29 @@ case "${1:-status}" in
   off)
     PREV=$(cat "$LAST" 2>/dev/null || echo local-merged)
     defaults write $DOMAIN selectConfigName "$PREV"
-    restart_clash && echo "已切回原配置: $PREV（出口 $(curl -s -m 8 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)）" || echo "ClashX 重启超时，手动看一眼菜单"
+    restart_clash && echo "已切回: ${PREV}" || echo "ClashX 重启超时"
     ;;
   *)
     IP="$(norm "$1")"
-    CUR="$(cur_config)"
-    [ "${CUR}" != "ccq-vps" ] && echo "${CUR}" > "$LAST"
+    CUR="$(cur_config)"; [ "$CUR" != "ccq-vps" ] && echo "$CUR" > "$LAST"
+    up_tunnel || { echo "SSH 隧道建立失败"; exit 1; }
     cat > "$CFG" <<EOF
-# ccq 出口配置（swvpn 自动生成，出口 ${IP}）
+# ccq 出口配置（swvpn 生成，出口 ${IP}，经 SSH 隧道到 dynproxy）
 port: 7890
 socks-port: 7891
-external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 proxies:
-  - { name: "egress", type: socks5, server: ${IP}, port: 1080, username: ${IP}, password: ${PASS} }
+  - { name: "egress", type: socks5, server: 127.0.0.1, port: 11080, username: ${IP}, password: "${PASS}" }
 proxy-groups:
-  - { name: "出口", type: select, proxies: ["egress", DIRECT] }
+  - { name: "egress-group", type: select, proxies: ["egress", DIRECT] }
 rules:
-  - MATCH,出口
+  - MATCH,egress-group
 EOF
     defaults write $DOMAIN selectConfigName "ccq-vps"
     restart_clash || { echo "ClashX 重启失败"; exit 1; }
-    OUT=$(curl -s -m 10 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
-    if [ "${OUT}" = "${IP}" ]; then echo "OK ClashX 已切到出口 ${IP}（实测出口一致）"
-    else echo "警告：期望 ${IP}，实测出口 ${OUT:-无}——检查该 IP 的 1080 是否有代理"; fi
+    OUT=$(curl -s -m 12 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
+    if [ "$OUT" = "$IP" ]; then echo "OK 出口 ${IP}（经 SSH 隧道，实测一致）"
+    else echo "警告: 期望 ${IP} 实测 ${OUT:-无}"; fi
     ;;
 esac
