@@ -8,8 +8,8 @@
 # claude 配置永不变：BASE_URL 恒为 127.0.0.1:8466，切换只重指隧道。
 set -uo pipefail
 SRV="root@104.223.81.129"
-declare -A PORT=( [1]=8466 [2]=8467 [3]=8468 )
-declare -A IP=( [1]=104.223.81.129 [2]=104.223.81.130 [3]=104.223.81.131 )
+port_for() { case "$1" in 1) echo 8466;; 2) echo 8467;; 3) echo 8468;; esac; }
+ip_for()   { case "$1" in 1) echo 104.223.81.129;; 2) echo 104.223.81.130;; 3) echo 104.223.81.131;; esac; }
 FACADE_DIR="${CPX_LOCAL_DIR:-$HOME/ZCodeProject/claude-local-api}"
 LOCAL_PROXY="http://127.0.0.1:7890"
 
@@ -21,10 +21,10 @@ case "${1:-status}" in
   1|2|3)
     local_p="$(facade_pids)"; [ -n "$local_p" ] && kill $local_p 2>/dev/null && echo "本地 facade 已停"
     tunnel_pids | xargs kill 2>/dev/null; sleep 0.6
-    autossh -M 0 -f -N -L 8466:127.0.0.1:${PORT[$1]} "$SRV" 2>/dev/null
-    sleep 1.2
+    autossh -M 0 -f -N -L 8466:127.0.0.1:$(port_for "$1") "$SRV" 2>/dev/null || ssh -f -N -L 8466:127.0.0.1:$(port_for "$1") "$SRV"
+    for t in 1 2 3 4 5; do sleep 1; curl -s -m 3 http://127.0.0.1:8466/health | grep -q ok && break; done
     if curl -s -m 4 http://127.0.0.1:8466/health | grep -q '"ok"'; then
-      echo "✓ 出口 ${IP[$1]}（服务器端口 ${PORT[$1]}）已就绪"
+      echo "OK 出口 $(ip_for "$1") 已就绪"
     else
       echo "隧道已建立但 facade 未响应，稍候重试 cpx status"
     fi
@@ -39,7 +39,7 @@ case "${1:-status}" in
   status)
     c="$(current)"
     if [ -n "$c" ]; then
-      for n in 1 2 3; do [ "${PORT[$n]}" = "$c" ] && echo "当前出口：${IP[$n]}"; done
+      for n in 1 2 3; do [ "$(port_for $n)" = "$c" ] && echo "当前出口：$(ip_for $n)"; done
     elif [ -n "$(facade_pids)" ]; then echo "当前出口：本地 clash"
     else echo "当前出口：无（未连接）"; fi
     curl -s -m 3 http://127.0.0.1:8466/health && echo " <- 端口 8466 正常" || echo "端口 8466 无响应"
