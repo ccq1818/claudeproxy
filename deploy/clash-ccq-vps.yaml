@@ -1,12 +1,12 @@
-# ccq 出口切换配置 — 三节点 + 选择组（ClashX 菜单里点选即切）
+# ccq 出口切换（dynproxy 版：用户名即出口 IP，服务器加新 IP 后自动可用）
 port: 7890
 socks-port: 7891
 mode: rule
 log-level: info
 proxies:
-  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
-  - { name: "vps-130", type: socks5, server: 104.223.81.130, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
-  - { name: "vps-131", type: socks5, server: 104.223.81.131, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
+  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.129, password: d221ea9e1fbae90a }
+  - { name: "vps-130", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.130, password: d221ea9e1fbae90a }
+  - { name: "vps-131", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.131, password: d221ea9e1fbae90a }
 proxy-groups:
   - { name: "出口", type: select, proxies: ["vps-129", "vps-130", "vps-131", DIRECT] }
 rules:

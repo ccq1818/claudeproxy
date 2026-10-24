@@ -5,7 +5,8 @@
 #   swvpn status           查看当前状态
 # 凭证固定内置（所有节点同一组），无需输入。
 set -u
-USER_PASS="cpx:d221ea9e1fbae90a"
+PASS="d221ea9e1fbae90a"
+SRV="104.223.81.129"   # dynproxy：用户名=出口IP
 GOST="$HOME/bin/gost"
 NETSERVICE="${SWVPN_NETSERVICE:-Wi-Fi}"
 
@@ -35,7 +36,7 @@ case "${1:-status}" in
     # 允许任意 IP：转发到该 IP:1080 的固定凭证 SOCKS
     [ -x "$GOST" ] || { echo "缺 $GOST"; exit 1; }
     stop_fwd
-    nohup "$GOST" -L "127.0.0.1:1080" -F "socks5://${USER_PASS}@${IP}:1080" >/dev/null 2>&1 &
+    nohup "$GOST" -L "127.0.0.1:1080" -F "socks5://${IP}:${PASS}@${SRV}:1080" >/dev/null 2>&1 &
     sleep 1
     networksetup -setsocksfirewallproxy "$NETSERVICE" 127.0.0.1 1080 2>/dev/null
     networksetup -setsocksfirewallproxystate "$NETSERVICE" on 2>/dev/null
