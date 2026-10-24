@@ -12,10 +12,9 @@
 
 ## 访问认证（v2.1 新增）
 
-- **本地模式（默认）**：不设 `CLAUDE_LOCAL_API_KEY` → 入口无校验，仅绑 127.0.0.1。
-- **部署到服务器**：设 `CLAUDE_LOCAL_API_KEY=<你的固定key>` → 所有 `/v1/*` 请求必须带
-  `Authorization: Bearer <key>` 或 `x-api-key: <key>`（常量时间比对，`/health` 保持开放供探活）。
-  客户端侧即 `ANTHROPIC_API_KEY=<key>` + `ANTHROPIC_BASE_URL=<服务器地址>`，零额外适配。
+- **零配置（默认）**：首次启动自动生成 `sk-cpx-` 前缀的随机 key，打印到控制台并保存到 `config.json`（权限 600，已 gitignore）；之后启动自动复用。
+- **自定义**：设 `CLAUDE_LOCAL_API_KEY` 环境变量覆盖自动生成。
+- 校验方式：`Authorization: Bearer <key>` 或 `x-api-key: <key>`（常量时间比对，`/health` 开放探活）；客户端侧即 `ANTHROPIC_API_KEY=<key>` + `ANTHROPIC_BASE_URL`，零额外适配。
 
 > **TLS 警告**：固定 key 若走明文 HTTP 公网传输可被嗅探。公网暴露必须在前面加 TLS
 > （caddy/nginx 反代或 Cloudflare），或继续用 SSH 隧道（`ssh -L 8466:127.0.0.1:8466 vps`，

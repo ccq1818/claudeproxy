@@ -17,6 +17,7 @@
 
 import http from "node:http";
 import crypto from "node:crypto";
+import fs from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +27,21 @@ import { query, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 
 const PORT = parseInt(process.env.PORT || "8466", 10);
 const HOST = process.env.HOST || "127.0.0.1";
-const API_KEY = process.env.CLAUDE_LOCAL_API_KEY || "";
+const API_KEY = (() => {
+  // explicit env wins; otherwise generate once on first boot, persist to
+  // config.json (0600) and print — starting the server needs zero configuration
+  if (process.env.CLAUDE_LOCAL_API_KEY) return process.env.CLAUDE_LOCAL_API_KEY;
+  const cfgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "config.json");
+  try {
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    if (cfg.apiKey) return cfg.apiKey;
+  } catch {}
+  const key = "sk-cpx-" + crypto.randomBytes(18).toString("base64url");
+  try { fs.writeFileSync(cfgPath, JSON.stringify({ apiKey: key }, null, 2) + "\n", mode0600()); } catch {}
+  console.log(`[auth] generated API key, saved to config.json — set it as ANTHROPIC_API_KEY on clients:\n        ${key}`);
+  return key;
+})();
+function mode0600() { return { mode: 0o600 }; }
 const CWD = path.resolve(process.env.CLAUDE_LOCAL_CWD || "./sandbox");
 const TOOLS_ON = process.env.CLAUDE_LOCAL_TOOLS === "1";
 const PERMISSION_MODE = process.env.CLAUDE_LOCAL_PERMISSION_MODE || "default";

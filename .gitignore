@@ -3,3 +3,4 @@ affinity.db
 *.log
 sandbox/
 server.v2.3.mjs.bak
+config.json

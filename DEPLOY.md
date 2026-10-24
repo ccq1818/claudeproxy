@@ -32,7 +32,7 @@ npm install
 CLAUDE_LOCAL_API_KEY=换成你的固定key node server.mjs
 
 # 另一个 SSH 窗口验证
-curl -H "x-api-key: 你的固定key" http://127.0.0.1:8466/v1/messages \
+curl -H "x-api-key: 首次启动打印的key" http://127.0.0.1:8466/v1/messages \
   -H 'content-type: application/json' \
   -d '{"model":"sonnet","messages":[{"role":"user","content":"ping"}]}'
 ```
