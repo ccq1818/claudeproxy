@@ -93,10 +93,15 @@ mock 环境验证的是协议，不是全部真实行为。拿真实编码会话
 客户端的 `BASE_URL`/`ANTHROPIC_API_KEY` 永远不变，切换的只是 127.0.0.1:8466 背后是谁：
 
 ```bash
-./deploy/switch.sh vps     # 断本地 facade，接 SSH 隧道 -> VPS 直连出口
-./deploy/switch.sh local   # 断隧道，起本地 facade -> 本地 clash 出口
-./deploy/switch.sh status  # 查看当前状态
+./deploy/switch.sh vultr-jp   # 隧道到任意 VPS（~/.ssh/config 里的别名，即装即用）
+./deploy/switch.sh aws-sg     # 多台 VPS 之间随意切，客户端配置不变
+./deploy/switch.sh local      # 断隧道，起本地 facade -> 本地 clash 出口
+./deploy/switch.sh status     # 当前模式 + 隧道指向 + 端口健康
+./deploy/switch.sh list       # 用过的目标清单
 ```
+
+多 VPS 约定：每台都按本手册部署同一个 claudeproxy（**同一个 key**、默认端口 8466），
+切换目标只需一条命令；新加一台 VPS = 部署一次 + 在 ~/.ssh/config 加个别名。
 
 说明：VPS 上**不需要**再装 clash——如果你本地 clash 的出口就是这台 VPS（如 vultr-经日本），
 那账号的 IP 历史本就一直是这个 IP，VPS 直连反而是最一致的形态；再套一层代理才会打破一致性。
