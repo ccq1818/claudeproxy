@@ -50,14 +50,19 @@ case "$cmd" in
     ;;
   *)
     # 任意其他参数都当作 ssh 别名（即某台 VPS）
-    if ! ssh -G "$cmd" >/dev/null 2>&1; then
-      echo "unknown target '$cmd' — add it to ~/.ssh/config first" >&2
+    # 先做真实连通性预检（解析+认证+可达），失败则什么都不动
+    if ! ssh -o BatchMode=yes -o ConnectTimeout=6 "$cmd" true 2>/dev/null; then
+      echo "target '$cmd' unreachable — check ~/.ssh/config and network; nothing changed" >&2
       exit 1
     fi
     stop_facade
     stop_tunnel
     autossh -M 0 -f -N -L ${PORT}:127.0.0.1:${PORT} "$cmd"
     remember "$cmd"
-    echo "tunnel up -> ${cmd} (egress: ${cmd} direct)"
+    if curl -s -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
+      echo "tunnel up -> ${cmd} (egress: ${cmd} direct, facade healthy)"
+    else
+      echo "tunnel up -> ${cmd}, but facade not answering on ${PORT} yet (did you deploy/start it there?)"
+    fi
     ;;
 esac
