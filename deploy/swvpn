@@ -1,33 +1,24 @@
 #!/bin/bash
-# swvpn — 两层代理：ClashX + SSH 动态代理。对服务器零要求（能 SSH 即可）。
-#   swvpn <IP>     ssh -D 到该机器 + ClashX 节点切换 + 验证
-#   swvpn off      切回原 ClashX 配置
-#   swvpn status   当前状态
+# swvpn <IP> — 一键生成两层链配置(日本IEPL -> 目标IP代理)并切换 ClashX
+#   swvpn 104.223.81.130   切到该出口
+#   swvpn off              切回原配置
+#   swvpn status           当前状态
 set -u
 DOMAIN="com.west2online.ClashX"
 CFG="$HOME/.config/clash/ccq-vps.yaml"
 LAST="$HOME/.swvpn-last-config"
-LP=11080
 
 cur_config() { defaults read $DOMAIN selectConfigName 2>/dev/null | tr -d '"'; }
-tunnel_pid() { pgrep -f "ssh.*-D.*${LP}" 2>/dev/null; }
-
-up_sshd() { # $1 = 服务器 IP（出口 = 该机器默认出口，通常就是这个 IP）
-  tunnel_pid | xargs kill 2>/dev/null; sleep 0.5
-  ssh -f -N -D "127.0.0.1:${LP}" "root@$1" 2>/dev/null || return 1
-  for i in 1 2 3 4 5; do sleep 1; nc -z 127.0.0.1 $LP 2>/dev/null && return 0; done
-  return 1
-}
 restart_clash() {
-  pkill -x ClashX 2>/dev/null; sleep 1; open -a ClashX
-  for i in 1 2 3 4 5 6 7 8; do sleep 1; nc -z 127.0.0.1 7890 2>/dev/null && return 0; done
+  pkill -x ClashX 2>/dev/null; sleep 1.5; open -a ClashX
+  for i in 1 2 3 4 5 6 7 8 9 10; do sleep 1; nc -z 127.0.0.1 7890 2>/dev/null && return 0; done
   return 1
 }
 
 case "${1:-status}" in
   status)
     echo "ClashX 配置: $(cur_config)"
-    OUT=$(curl -s -m 8 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
+    OUT=$(curl -s -m 10 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
     [ -n "${OUT}" ] && echo "当前出口: ${OUT}" || echo "7890 未就绪"
     ;;
   off)
@@ -38,24 +29,48 @@ case "${1:-status}" in
   *.*.*.*)
     IP="$1"
     CUR="$(cur_config)"; [ "$CUR" != "ccq-vps" ] && echo "$CUR" > "$LAST"
-    up_sshd "$IP" || { echo "SSH 到 ${IP} 失败"; exit 1; }
     cat > "$CFG" <<EOF
-# ccq 出口（两层：ClashX -> ssh -D ${IP}）
+# ccq 出口（swvpn 生成）— 两层链：日本IEPL -> ${IP}
 port: 7890
 socks-port: 7891
 mode: rule
 log-level: info
+dns:
+  enable: true
+  use-hosts: true
+  default-nameserver:
+  - 119.29.29.29
+  - 223.5.5.5
+  - 223.6.6.6
+  - 114.114.114.114
+  - 8.8.8.8
+  - tls://223.5.5.5
+  - tls://223.6.6.6
+  - tls://1.12.12.12
+  - tls://120.53.53.53
+  nameserver:
+  - tls://223.5.5.5
+  - tls://120.53.53.53
+  - 119.29.29.29
+  fallback:
+  - tls://1.12.12.12
+  - tls://120.53.53.53
 proxies:
-  - { name: "ssh", type: socks5, server: 127.0.0.1, port: ${LP} }
+  - { name: "jp-fwd", type: ss, server: 7.q.3.m.d.7.u.e.d.jp09-ae5.entry.v51124-5.qpon, port: 11161, cipher: aes-256-gcm, password: "f32ec7e1-ffa1-36c9-a38c-80c73973e595", udp: true }
+  - { name: "raw-egress", type: socks5, server: ${IP}, port: 443, username: cpx, password: "d221ea9e1fbae90a", tls: true, skip-cert-verify: true }
 proxy-groups:
-  - { name: "egress-group", type: select, proxies: ["ssh", DIRECT] }
+  - { name: "fwd", type: select, proxies: ["jp-fwd"] }
+  - { name: "via-ip", type: relay, proxies: ["fwd", "raw-egress"] }
+  - { name: "cpx-egress", type: select, proxies: ["via-ip", DIRECT] }
 rules:
-  - MATCH,egress-group
+  - MATCH,cpx-egress
 EOF
     defaults write $DOMAIN selectConfigName "ccq-vps"
     restart_clash || { echo "ClashX 重启失败"; exit 1; }
-    OUT=$(curl -s -m 12 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
-    [ -n "${OUT}" ] && echo "OK 已切到 ${IP}（实际出口: ${OUT}）" || echo "已切换但出口验证失败"
+    sleep 2
+    OUT=$(curl -s -m 30 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
+    if [ "$OUT" = "$IP" ]; then echo "OK 出口 ${IP}（两层链实测一致）"
+    else echo "警告: 期望 ${IP} 实测 ${OUT:-无}"; fi
     ;;
   *)
     echo "用法: swvpn <IP> | off | status" >&2; exit 1
