@@ -12,6 +12,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
         ipv4_address: 172.28.0.11
@@ -28,6 +29,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
         ipv4_address: 172.28.0.12
@@ -44,6 +46,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
         ipv4_address: 172.28.0.13
