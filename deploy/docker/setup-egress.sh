@@ -5,9 +5,10 @@
 set -euo pipefail
 IFACE="${1:?usage: setup-egress.sh <iface> <ip1> <ip2> <ip3>}"; shift
 [ "$#" -eq 3 ] || { echo "need exactly 3 egress IPs"; exit 1; }
+IPS=("$1" "$2" "$3")
 CIDS=(172.28.0.11 172.28.0.12 172.28.0.13)
 for i in 0 1 2; do
-  ip="${!i}"; cid="${CIDS[$i]}"
+  ip="${IPS[$i]}"; cid="${CIDS[$i]}"
   ip addr add "$ip/32" dev "$IFACE" 2>/dev/null || echo "alias $ip already present"
   iptables -t nat -D POSTROUTING -s "$cid" -j SNAT --to-source "$ip" 2>/dev/null || true
   iptables -t nat -A POSTROUTING -s "$cid" -j SNAT --to-source "$ip"
