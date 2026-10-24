@@ -56,16 +56,14 @@ case "$cmd" in
     if [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       target="${CLAUDEPROXY_SSH_USER:-root}@${cmd}"
     fi
-    SSH_PORT_OPT=()
-    [ -n "${CLAUDEPROXY_SSH_PORT:-}" ] && SSH_PORT_OPT=(-p "${CLAUDEPROXY_SSH_PORT}")
     # 真实连通性预检（解析+认证+可达），失败则什么都不动
-    if ! ssh -o BatchMode=yes -o ConnectTimeout=6 "${SSH_PORT_OPT[@]}" "$target" true 2>/dev/null; then
+    if ! ssh -o BatchMode=yes -o ConnectTimeout=6 ${CLAUDEPROXY_SSH_PORT:+-p "$CLAUDEPROXY_SSH_PORT"} "$target" true 2>/dev/null; then
       echo "target '$cmd' unreachable — check IP/user/key; nothing changed" >&2
       exit 1
     fi
     stop_facade
     stop_tunnel
-    autossh -M 0 -f -N "${SSH_PORT_OPT[@]}" -L ${PORT}:127.0.0.1:${PORT} "$target"
+    autossh -M 0 -f -N ${CLAUDEPROXY_SSH_PORT:+-p "$CLAUDEPROXY_SSH_PORT"} -L ${PORT}:127.0.0.1:${PORT} "$target"
     remember "$cmd"
     if curl -s -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
       echo "tunnel up -> ${cmd} (egress: ${cmd} direct, facade healthy)"
