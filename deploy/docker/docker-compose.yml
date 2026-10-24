@@ -64,7 +64,7 @@ services:
     mem_limit: 128m
     network_mode: host
     volumes:
-      - ./deploy/dynproxy.mjs:/dynproxy.mjs:ro
+      - ../../deploy/dynproxy.mjs:/dynproxy.mjs:ro
     command: ["node", "/dynproxy.mjs"]
 volumes:
   creds: {}
