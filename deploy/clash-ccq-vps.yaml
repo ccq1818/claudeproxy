@@ -1,12 +1,13 @@
-# ccq 出口切换（dynproxy 版：用户名即出口 IP，服务器加新 IP 后自动可用）
+# ccq 三出口（每个节点 = 一台独立代理，socks5 over TLS @443，ClashX 直连）
 port: 7890
 socks-port: 7891
+external-controller: 127.0.0.1:9090
 mode: rule
 log-level: info
 proxies:
-  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.129, password: d221ea9e1fbae90a }
-  - { name: "vps-130", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.130, password: d221ea9e1fbae90a }
-  - { name: "vps-131", type: socks5, server: 104.223.81.129, port: 1080, username: 104.223.81.131, password: d221ea9e1fbae90a }
+  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
+  - { name: "vps-130", type: socks5, server: 104.223.81.130, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
+  - { name: "vps-131", type: socks5, server: 104.223.81.131, port: 443, username: cpx, password: d221ea9e1fbae90a, tls: true, skip-cert-verify: true, udp: true }
 proxy-groups:
   - { name: "出口", type: select, proxies: ["vps-129", "vps-130", "vps-131", DIRECT] }
 rules:

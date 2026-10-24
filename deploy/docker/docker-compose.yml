@@ -58,14 +58,38 @@ services:
     volumes:
       - creds:/root/.claude
 
-  dynproxy:
-    image: node:22-slim
+
+  # ---- 每个 = 一个有独立出口 IP 的完整代理（socks5 over TLS @ 443）----
+  px1:
+    image: ginuerzh/gost
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
     restart: unless-stopped
-    mem_limit: 128m
-    network_mode: host
-    volumes:
-      - ../../deploy/dynproxy.mjs:/dynproxy.mjs:ro
-    command: ["node", "/dynproxy.mjs"]
+    mem_limit: 64m
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.21
+    ports:
+      - "104.223.81.129:443:443"
+  px2:
+    image: ginuerzh/gost
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
+    restart: unless-stopped
+    mem_limit: 64m
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.22
+    ports:
+      - "104.223.81.130:443:443"
+  px3:
+    image: ginuerzh/gost
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
+    restart: unless-stopped
+    mem_limit: 64m
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.23
+    ports:
+      - "104.223.81.131:443:443"
 volumes:
   creds: {}
 networks:
