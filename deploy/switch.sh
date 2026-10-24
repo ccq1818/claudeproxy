@@ -3,8 +3,9 @@
 #
 # 用法：
 #   ./switch.sh local          # 本地 facade（出口 = 本地 clash）
-#   ./switch.sh <ssh别名>      # 隧道到指定 VPS（别名需在 ~/.ssh/config 里配好）
-#                               例：./switch.sh vultr-jp   ./switch.sh aws-sg
+#   ./switch.sh <IP>           # 隧道到指定 VPS，IP 直连（默认 root，CLAUDEPROXY_SSH_USER 可改）
+#                               例：./switch.sh 1.2.3.4
+#   ./switch.sh <user@IP|别名>  # 也支持 user@ip 或 ~/.ssh/config 别名
 #   ./switch.sh status         # 当前模式、隧道指向哪台 VPS、端口健康
 #   ./switch.sh list           # 最近用过的目标清单
 #
@@ -49,15 +50,22 @@ case "$cmd" in
     echo "any Host alias in ~/.ssh/config works: ./switch.sh <alias>"
     ;;
   *)
-    # 任意其他参数都当作 ssh 别名（即某台 VPS）
-    # 先做真实连通性预检（解析+认证+可达），失败则什么都不动
-    if ! ssh -o BatchMode=yes -o ConnectTimeout=6 "$cmd" true 2>/dev/null; then
-      echo "target '$cmd' unreachable — check ~/.ssh/config and network; nothing changed" >&2
+    # 目标三种写法都支持：裸 IP（自动拼 CLAUDEPROXY_SSH_USER，默认 root）、
+    # user@ip、以及 ~/.ssh/config 里的别名
+    target="$cmd"
+    if [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      target="${CLAUDEPROXY_SSH_USER:-root}@${cmd}"
+    fi
+    SSH_PORT_OPT=()
+    [ -n "${CLAUDEPROXY_SSH_PORT:-}" ] && SSH_PORT_OPT=(-p "${CLAUDEPROXY_SSH_PORT}")
+    # 真实连通性预检（解析+认证+可达），失败则什么都不动
+    if ! ssh -o BatchMode=yes -o ConnectTimeout=6 "${SSH_PORT_OPT[@]}" "$target" true 2>/dev/null; then
+      echo "target '$cmd' unreachable — check IP/user/key; nothing changed" >&2
       exit 1
     fi
     stop_facade
     stop_tunnel
-    autossh -M 0 -f -N -L ${PORT}:127.0.0.1:${PORT} "$cmd"
+    autossh -M 0 -f -N "${SSH_PORT_OPT[@]}" -L ${PORT}:127.0.0.1:${PORT} "$target"
     remember "$cmd"
     if curl -s -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
       echo "tunnel up -> ${cmd} (egress: ${cmd} direct, facade healthy)"

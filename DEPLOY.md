@@ -93,8 +93,8 @@ mock 环境验证的是协议，不是全部真实行为。拿真实编码会话
 客户端的 `BASE_URL`/`ANTHROPIC_API_KEY` 永远不变，切换的只是 127.0.0.1:8466 背后是谁：
 
 ```bash
-./deploy/switch.sh vultr-jp   # 隧道到任意 VPS（~/.ssh/config 里的别名，即装即用）
-./deploy/switch.sh aws-sg     # 多台 VPS 之间随意切，客户端配置不变
+./deploy/switch.sh 1.2.3.4    # IP 直连（默认 root 用户，CLAUDEPROXY_SSH_USER 覆盖）
+./deploy/switch.sh ubuntu@5.6.7.8   # 或 user@ip，或 ~/.ssh/config 别名
 ./deploy/switch.sh local      # 断隧道，起本地 facade -> 本地 clash 出口
 ./deploy/switch.sh status     # 当前模式 + 隧道指向 + 端口健康
 ./deploy/switch.sh list       # 用过的目标清单
