@@ -5,15 +5,15 @@
 set -euo pipefail
 IFACE="${1:?usage: setup-egress.sh <iface> <ip1> <ip2> <ip3>}"; shift
 [ "$#" -eq 3 ] || { echo "need exactly 3 egress IPs"; exit 1; }
-IPS=("$1" "$2" "$3")
-CIDS=(172.28.0.11 172.28.0.12 172.28.0.13)
-for i in 0 1 2; do
+IPS=("$1" "$2" "$3" "$1" "$2" "$3")
+CIDS=(172.28.0.11 172.28.0.12 172.28.0.13 172.28.0.21 172.28.0.22 172.28.0.23)
+for i in 0 1 2 3 4 5; do
   ip="${IPS[$i]}"; cid="${CIDS[$i]}"
   ip addr add "$ip/32" dev "$IFACE" 2>/dev/null || echo "alias $ip already present"
   # delete stale attempts, then INSERT at the top: docker's own MASQUERADE for the
   # bridge subnet would otherwise match first and egress via the primary IP
   while iptables -t nat -D POSTROUTING -s "$cid" -j SNAT --to-source "$ip" 2>/dev/null; do :; done
   iptables -t nat -I POSTROUTING 1 -s "$cid" -j SNAT --to-source "$ip"
-  echo "container cpx$((i+1)) ($cid) -> egress $ip"
+  echo "container ($cid) -> egress $ip"
 done
 echo "done. 验证：docker exec cpx1 curl -s https://api.ipify.org  应返回 ${!0}... 用各容器分别试"
