@@ -10,6 +10,7 @@
 ```bash
 npm install -g @anthropic-ai/claude-code   # 或官方原生安装脚本
 
+bash harden-vps.sh    # 先静默：遥测开关写入 settings.json（连登录会话都不上报）
 claude /login
 ```
 
@@ -108,6 +109,6 @@ mock 环境验证的是协议，不是全部真实行为。拿真实编码会话
 
 ## 运维备忘
 
-- OAuth 过期兜底：`claude -p hi` 报未登录时，SSH 上去重跑 `claude /login`
+- OAuth 过期兜底：`claude -p hi` 报未登录时，SSH 上去重跑 `claude /login`（遥测已被 harden-vps.sh 关闭，手工运行也静默）
 - 回滚：`git log` 之外，v2.3 备份实现见仓库 release / 本地 `server.v2.3.mjs.bak`
 - 日志：stdout 进 journald；`/health` 可探活（含活跃 worker 数）
