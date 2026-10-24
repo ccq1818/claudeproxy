@@ -55,6 +55,6 @@ function serve(conn) {
   conn.on("error", () => {});
 }
 
-net.createServer(serve).listen(PORT, "0.0.0.0", () => {
+net.createServer(serve).listen(PORT, "127.0.0.1", () => {
   console.log(`[dynproxy] :${PORT} — username = egress IP (local IPv4 set: ${[...local4].filter((x) => !x.startsWith("127.")).join(", ")})`);
 });
