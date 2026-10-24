@@ -12,6 +12,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      HOST: "0.0.0.0"
       CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
@@ -29,6 +30,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      HOST: "0.0.0.0"
       CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
@@ -46,6 +48,7 @@ services:
     mem_limit: 512m
     environment:
       CLAUDE_LOCAL_WORKER_MAX: "4"
+      HOST: "0.0.0.0"
       CLAUDE_LOCAL_API_KEY: "sk-cpx-nLpkfUYAzEX50rp10qhPPV6-"
     networks:
       cpxnet:
