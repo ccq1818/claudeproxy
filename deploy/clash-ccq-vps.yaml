@@ -1,0 +1,13 @@
+# ccq 出口切换配置 — 三节点 + 选择组（ClashX 菜单里点选即切）
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: info
+proxies:
+  - { name: "vps-129", type: socks5, server: 104.223.81.129, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
+  - { name: "vps-130", type: socks5, server: 104.223.81.130, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
+  - { name: "vps-131", type: socks5, server: 104.223.81.131, port: 1080, username: cpx, password: d221ea9e1fbae90a, udp: true }
+proxy-groups:
+  - { name: "出口", type: select, proxies: ["vps-129", "vps-130", "vps-131", DIRECT] }
+rules:
+  - MATCH,出口
