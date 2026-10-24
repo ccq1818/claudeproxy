@@ -1,0 +1,5 @@
+node_modules/
+affinity.db
+*.log
+sandbox/
+server.v2.3.mjs.bak
