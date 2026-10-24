@@ -1,51 +1,59 @@
 #!/bin/bash
-# swvpn — 一键把系统代理切到指定出口 IP
-#   swvpn 104.223.81.130   （或简写 swvpn 130）
-#   swvpn off              关闭并还原系统代理
-#   swvpn status           查看当前状态
-# 凭证固定内置（所有节点同一组），无需输入。
+# swvpn — 通过 ClashX 一键切出口。浏览器/系统代理完全交给 ClashX 管理。
+#   swvpn <IP或简写129/130/131>   切到该出口（自动生成节点+切配置+重启ClashX+验证）
+#   swvpn off                     切回原配置
+#   swvpn status                  当前出口
 set -u
+DOMAIN="com.west2online.ClashX"
+CFG_DIR="$HOME/.config/clash"
+CFG="$CFG_DIR/ccq-vps.yaml"
+LAST="$HOME/.swvpn-last-config"
 PASS="d221ea9e1fbae90a"
-# 零配置规则：目标 IP 既是代理入口又是出口（dynproxy 监听服务器所有 IP，用户名=出口）
-GOST="$HOME/bin/gost"
-NETSERVICE="${SWVPN_NETSERVICE:-Wi-Fi}"
 
-# 完整 IP 即插即用（新服务器零配置）；简写仅是当前服务器的便利缩写
 norm() { case "$1" in
   129) echo 104.223.81.129;; 130) echo 104.223.81.130;; 131) echo 104.223.81.131;;
   *) echo "$1";; esac; }
-
-stop_fwd() { pkill -f "gost -L 127.0.0.1:1080" 2>/dev/null && sleep 0.4; return 0; }
+cur_config() { defaults read $DOMAIN selectConfigName 2>/dev/null | tr -d '"'; }
+restart_clash() {
+  pkill -x ClashX 2>/dev/null; sleep 1
+  open -a ClashX
+  for i in 1 2 3 4 5 6 7 8; do sleep 1; nc -z 127.0.0.1 7890 2>/dev/null && return 0; done
+  return 1
+}
 
 case "${1:-status}" in
-  off)
-    stop_fwd
-    for c in socksfirewallproxy webproxy securewebproxy; do networksetup -set${c}state "$NETSERVICE" off 2>/dev/null; done
-    echo "已关闭，系统代理还原"
-    ;;
   status)
-    echo "代理栏位: HTTP $(networksetup -getwebproxy "$NETSERVICE" 2>/dev/null | sed -n 2p) | SOCKS $(networksetup -getsocksfirewallproxy "$NETSERVICE" 2>/dev/null | sed -n 2p)"
-    if pgrep -f "gost -L 127.0.0.1:1080" >/dev/null; then
-      echo "转发器: 运行中 -> $(ps -o command= -p $(pgrep -f 'gost -L 127.0.0.1:1080' | head -1) | grep -oE '[0-9.]+:1080' | head -1)"
-      printf "当前出口: "; curl -s -m 8 --socks5 127.0.0.1:1080 https://api.ipify.org || echo 检测失败; echo
-    else
-      echo "转发器: 未运行"
-    fi
+    echo "ClashX 配置: $(cur_config)"
+    OUT=$(curl -s -m 8 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
+    [ -n "$OUT" ] && echo "当前出口: $OUT" || echo "7890 代理未就绪"
+    ;;
+  off)
+    PREV=$(cat "$LAST" 2>/dev/null || echo local-merged)
+    defaults write $DOMAIN selectConfigName "$PREV"
+    restart_clash && echo "已切回原配置: $PREV（出口 $(curl -s -m 8 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)）" || echo "ClashX 重启超时，手动看一眼菜单"
     ;;
   *)
     IP="$(norm "$1")"
-    # 允许任意 IP：转发到该 IP:1080 的固定凭证 SOCKS
-    [ -x "$GOST" ] || { echo "缺 $GOST"; exit 1; }
-    stop_fwd
-    nohup "$GOST" -L "127.0.0.1:1080" -F "socks5://${IP}:${PASS}@${IP}:1080" >/dev/null 2>&1 &
-    sleep 1
-    # 接管全部三个栏位：浏览器优先用 HTTP/HTTPS 字段，只设 SOCKS 会被别的代理抢走
-    for c in socksfirewallproxy webproxy securewebproxy; do
-      networksetup -set${c} "$NETSERVICE" 127.0.0.1 1080 2>/dev/null
-      networksetup -set${c}state "$NETSERVICE" on 2>/dev/null
-    done
-    OUT=$(curl -s -m 10 --socks5 127.0.0.1:1080 https://api.ipify.org)
-    if [ -n "$OUT" ]; then echo "OK 系统代理已切到 ${IP}（实测出口: ${OUT}）"
-    else echo "转发已建立但出口验证失败，检查该 IP 的 1080 端口是否部署了代理"; fi
+    CUR="$(cur_config)"
+    [ "$CUR" != "ccq-vps" ] && echo "$CUR" > "$LAST"
+    cat > "$CFG" <<EOF
+# ccq 出口配置（swvpn 自动生成，出口 $IP）
+port: 7890
+socks-port: 7891
+external-controller: 127.0.0.1:9090
+mode: rule
+log-level: info
+proxies:
+  - { name: "egress", type: socks5, server: $IP, port: 1080, username: $IP, password: $PASS }
+proxy-groups:
+  - { name: "出口", type: select, proxies: ["egress", DIRECT] }
+rules:
+  - MATCH,出口
+EOF
+    defaults write $DOMAIN selectConfigName "ccq-vps"
+    restart_clash || { echo "ClashX 重启失败"; exit 1; }
+    OUT=$(curl -s -m 10 -x http://127.0.0.1:7890 https://api.ipify.org 2>/dev/null)
+    if [ "$OUT" = "$IP" ]; then echo "OK ClashX 已切到出口 $IP（实测出口一致）"
+    else echo "警告：期望 $IP，实测出口 ${OUT:-无}——检查该 IP 的 1080 是否有代理"; fi
     ;;
 esac
