@@ -62,7 +62,7 @@ services:
   # ---- 每个 = 一个有独立出口 IP 的完整代理（socks5 over TLS @ 443）----
   px1:
     image: ginuerzh/gost
-    command: ["-L", "socks5://cpx:d221ea9e1fbae90a@:443"]
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
     restart: unless-stopped
     mem_limit: 64m
     networks:
@@ -72,7 +72,7 @@ services:
       - "104.223.81.129:443:443"
   px2:
     image: ginuerzh/gost
-    command: ["-L", "socks5://cpx:d221ea9e1fbae90a@:443"]
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
     restart: unless-stopped
     mem_limit: 64m
     networks:
@@ -82,7 +82,7 @@ services:
       - "104.223.81.130:443:443"
   px3:
     image: ginuerzh/gost
-    command: ["-L", "socks5://cpx:d221ea9e1fbae90a@:443"]
+    command: ["-L", "socks5+tls://cpx:d221ea9e1fbae90a@:443"]
     restart: unless-stopped
     mem_limit: 64m
     networks:
