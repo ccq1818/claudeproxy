@@ -1,37 +1,61 @@
-# 三个 claudeproxy 实例，各自独立登录态（命名卷）、各自固定出口 IP（SNAT 规则见 setup-egress.sh）。
-# 宿主机回环暴露 8466/8467/8468，switch.sh 或本地隧道任选一个用。
-# 首次使用：逐个容器登录一次：
-#   docker exec -it cpx1 claude /login    （cpx2/cpx3 同理，各自独立凭证卷）
+# claudeproxy 三实例：同一账号（共享凭证卷）、各自固定出口 IP（SNAT 规则见 setup-egress.sh）。
+# 宿主机回环暴露 8466/8467/8468，本地隧道任选一个。
+# 首次使用只需登录一次（凭证三容器共享）：
+#   docker exec -it cpx1 claude /login
 services:
   cpx1:
-    build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
     image: claudeproxy:3
     restart: unless-stopped
     mem_limit: 512m
-    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
-    networks: { cpxnet: { ipv4_address: 172.28.0.11 } } }
-    ports: [ "127.0.0.1:8466:8466" ]
-    volumes: [ creds:/root/.claude ]
+    environment:
+      CLAUDE_LOCAL_WORKER_MAX: "4"
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.11
+    ports:
+      - "127.0.0.1:8466:8466"
+    volumes:
+      - creds:/root/.claude
   cpx2:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
     image: claudeproxy:3
-    build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     restart: unless-stopped
     mem_limit: 512m
-    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
-    networks: { cpxnet: { ipv4_address: 172.28.0.12 } } }
-    ports: [ "127.0.0.1:8467:8466" ]
-    volumes: [ creds:/root/.claude ]
+    environment:
+      CLAUDE_LOCAL_WORKER_MAX: "4"
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.12
+    ports:
+      - "127.0.0.1:8467:8466"
+    volumes:
+      - creds:/root/.claude
   cpx3:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
     image: claudeproxy:3
-    build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     restart: unless-stopped
     mem_limit: 512m
-    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
-    networks: { cpxnet: { ipv4_address: 172.28.0.13 } } }
-    ports: [ "127.0.0.1:8468:8466" ]
-    volumes: [ creds:/root/.claude ]
-volumes: { creds: {} }
+    environment:
+      CLAUDE_LOCAL_WORKER_MAX: "4"
+    networks:
+      cpxnet:
+        ipv4_address: 172.28.0.13
+    ports:
+      - "127.0.0.1:8468:8466"
+    volumes:
+      - creds:/root/.claude
+volumes:
+  creds: {}
 networks:
   cpxnet:
     driver: bridge
-    ipam: { config: [ { subnet: 172.28.0.0/24 } ] }
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
