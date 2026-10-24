@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# cpx — claudeproxy 一键切换。用法：
+#   cpx 1      出口 104.223.81.129
+#   cpx 2      出口 104.223.81.130
+#   cpx 3      出口 104.223.81.131
+#   cpx local  本地 clash 出口
+#   cpx status 当前状态
+# claude 配置永不变：BASE_URL 恒为 127.0.0.1:8466，切换只重指隧道。
+set -uo pipefail
+SRV="root@104.223.81.129"
+declare -A PORT=( [1]=8466 [2]=8467 [3]=8468 )
+declare -A IP=( [1]=104.223.81.129 [2]=104.223.81.130 [3]=104.223.81.131 )
+FACADE_DIR="${CPX_LOCAL_DIR:-$HOME/ZCodeProject/claude-local-api}"
+LOCAL_PROXY="http://127.0.0.1:7890"
+
+tunnel_pids() { pgrep -f "autossh.*-L 8466:127.0.0.1:846" 2>/dev/null; }
+facade_pids() { pgrep -f "node .*server\.mjs" 2>/dev/null | grep -v $$; }
+current() { local p=$(tunnel_pids | head -1); [ -n "$p" ] && ps -o command= -p $p | grep -oE '8466:127.0.0.1:846[678]' | grep -oE '846[678]$'; }
+
+case "${1:-status}" in
+  1|2|3)
+    local_p="$(facade_pids)"; [ -n "$local_p" ] && kill $local_p 2>/dev/null && echo "本地 facade 已停"
+    tunnel_pids | xargs kill 2>/dev/null; sleep 0.6
+    autossh -M 0 -f -N -L 8466:127.0.0.1:${PORT[$1]} "$SRV" 2>/dev/null
+    sleep 1.2
+    if curl -s -m 4 http://127.0.0.1:8466/health | grep -q '"ok"'; then
+      echo "✓ 出口 ${IP[$1]}（服务器端口 ${PORT[$1]}）已就绪"
+    else
+      echo "隧道已建立但 facade 未响应，稍候重试 cpx status"
+    fi
+    ;;
+  local)
+    tunnel_pids | xargs kill 2>/dev/null && echo "隧道已断"
+    lp="$(facade_pids)"; if [ -z "$lp" ]; then
+      (cd "$FACADE_DIR" && HTTPS_PROXY="$LOCAL_PROXY" HTTP_PROXY="$LOCAL_PROXY" nohup node server.mjs >/dev/null 2>&1 &)
+      sleep 1.2; echo "✓ 本地 facade（clash 出口）已启动"
+    else echo "本地 facade 已在运行"; fi
+    ;;
+  status)
+    c="$(current)"
+    if [ -n "$c" ]; then
+      for n in 1 2 3; do [ "${PORT[$n]}" = "$c" ] && echo "当前出口：${IP[$n]}"; done
+    elif [ -n "$(facade_pids)" ]; then echo "当前出口：本地 clash"
+    else echo "当前出口：无（未连接）"; fi
+    curl -s -m 3 http://127.0.0.1:8466/health && echo " <- 端口 8466 正常" || echo "端口 8466 无响应"
+    ;;
+  *) echo "用法: cpx 1|2|3|local|status" >&2; exit 1 ;;
+esac
