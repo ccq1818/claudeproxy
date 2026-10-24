@@ -7,24 +7,30 @@ services:
     build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     image: claudeproxy:3
     restart: unless-stopped
+    mem_limit: 512m
+    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
     networks: { cpxnet: { ipv4_address: 172.28.0.11 } } }
     ports: [ "127.0.0.1:8466:8466" ]
-    volumes: [ cpx1-creds:/root/.claude ]
+    volumes: [ creds:/root/.claude ]
   cpx2:
     image: claudeproxy:3
     build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     restart: unless-stopped
+    mem_limit: 512m
+    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
     networks: { cpxnet: { ipv4_address: 172.28.0.12 } } }
     ports: [ "127.0.0.1:8467:8466" ]
-    volumes: [ cpx2-creds:/root/.claude ]
+    volumes: [ creds:/root/.claude ]
   cpx3:
     image: claudeproxy:3
     build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
     restart: unless-stopped
+    mem_limit: 512m
+    environment: { CLAUDE_LOCAL_WORKER_MAX: "4" }
     networks: { cpxnet: { ipv4_address: 172.28.0.13 } } }
     ports: [ "127.0.0.1:8468:8466" ]
-    volumes: [ cpx3-creds:/root/.claude ]
-volumes: { cpx1-creds: {}, cpx2-creds: {}, cpx3-creds: {} }
+    volumes: [ creds:/root/.claude ]
+volumes: { creds: {} }
 networks:
   cpxnet:
     driver: bridge
