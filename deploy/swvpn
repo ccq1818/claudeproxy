@@ -18,11 +18,11 @@ stop_fwd() { pkill -f "gost -L 127.0.0.1:1080" 2>/dev/null && sleep 0.4; return 
 case "${1:-status}" in
   off)
     stop_fwd
-    networksetup -setsocksproxystate "$NETSERVICE" off 2>/dev/null
+    networksetup -setsocksfirewallproxystate "$NETSERVICE" off 2>/dev/null
     echo "已关闭，系统代理还原"
     ;;
   status)
-    echo "系统SOCKS代理: $(networksetup -getsocksproxy "$NETSERVICE" 2>/dev/null | head -1)"
+    echo "系统SOCKS代理: $(networksetup -getsocksfirewallproxy "$NETSERVICE" 2>/dev/null | head -1)"
     if pgrep -f "gost -L 127.0.0.1:1080" >/dev/null; then
       echo "转发器: 运行中 -> $(ps -o command= -p $(pgrep -f 'gost -L 127.0.0.1:1080' | head -1) | grep -oE '[0-9.]+:1080' | head -1)"
       printf "当前出口: "; curl -s -m 8 --socks5 127.0.0.1:1080 https://api.ipify.org || echo 检测失败; echo
@@ -37,8 +37,8 @@ case "${1:-status}" in
     stop_fwd
     nohup "$GOST" -L "127.0.0.1:1080" -F "socks5://${USER_PASS}@${IP}:1080" >/dev/null 2>&1 &
     sleep 1
-    networksetup -setsocksproxy "$NETSERVICE" 127.0.0.1 1080 2>/dev/null
-    networksetup -setsocksproxystate "$NETSERVICE" on 2>/dev/null
+    networksetup -setsocksfirewallproxy "$NETSERVICE" 127.0.0.1 1080 2>/dev/null
+    networksetup -setsocksfirewallproxystate "$NETSERVICE" on 2>/dev/null
     OUT=$(curl -s -m 10 --socks5 127.0.0.1:1080 https://api.ipify.org)
     if [ -n "$OUT" ]; then echo "OK 系统代理已切到 ${IP}（实测出口: ${OUT}）"
     else echo "转发已建立但出口验证失败，检查该 IP 的 1080 端口是否部署了代理"; fi
